@@ -4,10 +4,24 @@ Sloth VDF (Verifiable Delay Function) solver.
 Solves the proof-of-work challenge used by WAFs based on the Sloth VDF scheme.
 Given a challenge {prime, input, t}, computes t iterations of modular square roots
 and returns the proof cookie.
+
+Uses gmpy2 when available (~10x faster on the typical 4096-bit prime used by
+WAFs in the wild) and falls back to Python's built-in pow() otherwise.
 """
 
 import re
 import json
+
+try:
+    import gmpy2
+    _MPZ = gmpy2.mpz
+    _POWMOD = gmpy2.powmod
+    HAS_GMPY2 = True
+except ImportError:
+    gmpy2 = None
+    _MPZ = int
+    _POWMOD = pow
+    HAS_GMPY2 = False
 
 
 def solve_vdf(args: dict) -> str:
@@ -23,22 +37,22 @@ def solve_vdf(args: dict) -> str:
     Returns:
         Proof as a hex string.
     """
-    prime = int(args["prime"], 16)
-    inp = int(args["input"], 16)
+    prime = _MPZ(args["prime"], 16)
+    inp = _MPZ(args["input"], 16)
     t = args["t"]
     exp = (prime + 1) // 4
 
     # Normalize to quadratic residue
     y = inp % prime
     if y != 0:
-        if pow(y, (prime - 1) // 2, prime) != 1:
+        if _POWMOD(y, (prime - 1) // 2, prime) != 1:
             y = prime - y
 
     # Iterate
     for _ in range(t):
-        y = pow(y, exp, prime)
+        y = _POWMOD(y, exp, prime)
 
-    return hex(y)[2:]
+    return hex(int(y))[2:]
 
 
 def parse_challenge(html: str) -> dict | None:

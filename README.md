@@ -43,6 +43,21 @@ proof = solve_vdf(args)
 cookie = build_cookie(args, proof)
 ```
 
-## No dependencies
+## Dependencies
 
-Pure Python, no external packages needed.
+Pure Python, no required dependencies.
+
+For a ~10x speedup on the typical 4096-bit prime used by these WAFs, install [`gmpy2`](https://pypi.org/project/gmpy2/) — the solver picks it up automatically:
+
+```bash
+pip install gmpy2
+```
+
+Benchmark on the rebuy.de challenge (4096-bit prime, t=200):
+
+| Backend       | Time   |
+|---------------|--------|
+| Python `pow`  | ~39 s  |
+| `gmpy2.powmod`| ~3.4 s |
+
+You can verify which backend is active with `solver.HAS_GMPY2`.
